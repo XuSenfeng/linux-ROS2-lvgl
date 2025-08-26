@@ -14,7 +14,7 @@
 #define SNAKE_GRID_W 40
 #define SNAKE_GRID_H 30
 #define SNAKE_MAX_LEN (SNAKE_GRID_W * SNAKE_GRID_H)
-#define SNAKE_CELL_SIZE 12
+#define SNAKE_CELL_SIZE 10
 
 typedef struct {
     int x;
@@ -229,28 +229,26 @@ static bool snake_hit_body(snake_point_t p)
 static bool snake_hit_wall(snake_point_t p)
 {
     /* 越界或落在外圈(0 / width-1 / 0 / height-1)即视为撞墙，不依赖字符串越界 */
-    if (p.x <= 0 || p.y <= 0 || p.x >= (SNAKE_GRID_W - 1) || p.y >= (SNAKE_GRID_H - 1)) {
-        return true;
-    }
+    // if (p.x <= 0 || p.y <= 0 || p.x >= (SNAKE_GRID_W - 1) || p.y >= (SNAKE_GRID_H - 1)) {
+    //     return true;
+    // }
     return s_wall_map[p.y][p.x] == '1';
 }
 
 static bool snake_is_wall_cell(int x, int y)
 {
-    if (x <= 0 || y <= 0 || x >= (SNAKE_GRID_W - 1) || y >= (SNAKE_GRID_H - 1)) {
-        return true;
-    }
+    // if (x <= 0 || y <= 0 || x >= (SNAKE_GRID_W - 1) || y >= (SNAKE_GRID_H - 1)) {
+    //     return true;
+    // }
     return s_wall_map[y][x] == '1';
 }
 
+// 初始化果实的位置
 static void snake_place_berry(void)
 {
     static int temp = 0;
     snake_point_t p;
     for (int i = 0; i < 50; i++) {
-            // p.x = 10;
-            // p.y = 10;
-            // 10, 10
         p.x =  1 + (rand() % (SNAKE_GRID_W - 2));
         p.y =  1 + (rand() % (SNAKE_GRID_H - 2));
         bool hit = false;
@@ -622,10 +620,10 @@ void ui_Snake_AI_button(lv_obj_t * ui_HomeScreen, lv_obj_t * ui_AppIconContainer
     lv_obj_set_width(ui_Icon2048, LV_SIZE_CONTENT);
     lv_obj_set_height(ui_Icon2048, LV_SIZE_CONTENT);
     lv_obj_set_align(ui_Icon2048, LV_ALIGN_CENTER);
-    lv_label_set_text(ui_Icon2048, "");
+    lv_label_set_text(ui_Icon2048, "Snake");
     lv_obj_set_style_text_color(ui_Icon2048, lv_color_hex(0xFFFFFF), LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_opa(ui_Icon2048, 196, LV_PART_MAIN | LV_STATE_DEFAULT);
-    lv_obj_set_style_text_font(ui_Icon2048, &ui_font_iconfont20, LV_PART_MAIN | LV_STATE_DEFAULT);
+    // lv_obj_set_style_text_font(ui_Icon2048, &ui_font_iconfont20, LV_PART_MAIN | LV_STATE_DEFAULT);
     
     lv_obj_add_event_cb(ui_TimerBtn, button_cb, LV_EVENT_CLICKED, "SnakeAIPage");
 }
