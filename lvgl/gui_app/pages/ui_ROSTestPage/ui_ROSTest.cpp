@@ -1,5 +1,6 @@
 #include "ui_ROSTest.h"
 #include "rclcpp/rclcpp.hpp"
+#include "geometry_msgs/msg/twist.hpp"
 
 ///////////////////// VARIABLES ////////////////////
 
@@ -20,12 +21,84 @@ static void ui_event_back_btn(lv_event_t * e)
 }
 
 
+class PublisherNode : public rclcpp::Node
+{
+    public:
+        PublisherNode()
+        : Node("topic_helloworld_pub") // ROS2节点父类初始化
+        {
+            // 创建发布者对象（消息类型、话题名、队列长度）
+            publisher_ = this->create_publisher<geometry_msgs::msg::Twist>("/turtle1/cmd_vel", 10);
+        }
+
+        void publish_twist(float linear_x, float angular_z)
+        {
+            geometry_msgs::msg::Twist msg;
+            msg.linear.x = linear_x;
+            msg.linear.y = 0.0f;
+            msg.linear.z = 0.0f;
+            msg.angular.x = 0.0f;
+            msg.angular.y = 0.0f;
+            msg.angular.z = angular_z;
+            publisher_->publish(msg);
+        }
+
+    private:
+    	// 发布者指针
+	rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr publisher_;
+};
+
+struct TwistCommand {
+    float linear_x;
+    float angular_z;
+};
+
+static std::shared_ptr<PublisherNode> g_turtle_pub_node;
+
+static void ui_event_cmd_btn(lv_event_t * e)
+{
+    lv_event_code_t code = lv_event_get_code(e);
+    if(code == LV_EVENT_CLICKED)
+    {
+        TwistCommand * cmd = static_cast<TwistCommand *>(lv_event_get_user_data(e));
+        if(cmd != nullptr && g_turtle_pub_node)
+        {
+            g_turtle_pub_node->publish_twist(cmd->linear_x, cmd->angular_z);
+        }
+    }
+}
+
+static lv_obj_t * ui_create_cmd_button(lv_obj_t * parent, const char * text, int x, int y, TwistCommand * cmd)
+{
+    lv_obj_t * btn = lv_btn_create(parent);
+    lv_obj_set_size(btn, 90, 50);
+    lv_obj_align(btn, LV_ALIGN_TOP_LEFT, x, y);
+    lv_obj_t * label = lv_label_create(btn);
+    lv_label_set_text(label, text);
+    lv_obj_align(label, LV_ALIGN_CENTER, 0, 0);
+    lv_obj_set_style_text_font(label, &lv_font_montserrat_20, 0);
+    lv_obj_add_event_cb(btn, ui_event_cmd_btn, LV_EVENT_ALL, cmd);
+    return btn;
+}
+
+
 
 ///////////////////// SCREEN init ////////////////////
-
+// extern rclcpp::executors::SingleThreadedExecutor* g_executor;
 void ui_ROSTest_init(void *arg)
 {
+
+    rclcpp::executors::SingleThreadedExecutor* executor = (rclcpp::executors::SingleThreadedExecutor*)arg;
     lv_obj_t * ROSTestPage = lv_obj_create(NULL);
+
+    if(!g_turtle_pub_node)
+    {
+        g_turtle_pub_node = std::make_shared<PublisherNode>();
+        if(executor)
+        {
+            executor->add_node(g_turtle_pub_node);
+        }
+    }
 
     // 创建返回按钮
     lv_obj_t * back_btn = lv_btn_create(ROSTestPage);
@@ -37,6 +110,18 @@ void ui_ROSTest_init(void *arg)
     lv_obj_set_style_text_font(back_btn_label, &lv_font_montserrat_20, 0);
     lv_obj_add_event_cb(back_btn, ui_event_back_btn, LV_EVENT_ALL, NULL);
 
+    static TwistCommand cmd_forward = {1.0f, 0.0f};
+    static TwistCommand cmd_backward = {-1.0f, 0.0f};
+    static TwistCommand cmd_left = {0.0f, 1.0f};
+    static TwistCommand cmd_right = {0.0f, -1.0f};
+    static TwistCommand cmd_stop = {0.0f, 0.0f};
+
+    ui_create_cmd_button(ROSTestPage, "Forward", 20, 80, &cmd_forward);
+    ui_create_cmd_button(ROSTestPage, "Back", 20, 140, &cmd_backward);
+    ui_create_cmd_button(ROSTestPage, "Left", 20, 200, &cmd_left);
+    ui_create_cmd_button(ROSTestPage, "Right", 20, 260, &cmd_right);
+    ui_create_cmd_button(ROSTestPage, "Stop", 20, 320, &cmd_stop);
+
 
     // load page
     lv_scr_load_anim(ROSTestPage, LV_SCR_LOAD_ANIM_MOVE_RIGHT, 100, 0, true);
@@ -47,6 +132,7 @@ void ui_ROSTest_init(void *arg)
 void ui_ROSTest_deinit()
 {
     // deinit
+    g_turtle_pub_node.reset();
 }
 
 

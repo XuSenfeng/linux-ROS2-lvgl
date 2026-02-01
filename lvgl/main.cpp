@@ -82,31 +82,14 @@ void button_cb1(lv_event_t * e)
         lv_label_set_text(label, "Clicked");
 }
 
-class HelloWorldNode : public rclcpp::Node
-{	
-    // ROS2节点初始化以及父类初始化
-    public:
-        HelloWorldNode()
-        : Node("node_helloworld_class")
-        {
-            using namespace std::chrono_literals;
-            printf("HelloWorldNode started.\n");
-            timer_ = this->create_wall_timer(
-                1s,
-                [this]() {
-                    printf("helloworld\n");
-                    RCLCPP_INFO(this->get_logger(), "Hello World");
-                }
-            );
-        }
-
-    private:
-        rclcpp::TimerBase::SharedPtr timer_;
-};
 
 
+rclcpp::executors::SingleThreadedExecutor* g_executor = nullptr;
 int main(int argc, char **argv)
 {
+    rclcpp::init(argc, argv);
+    static rclcpp::executors::SingleThreadedExecutor executor;
+    g_executor = &executor;
     lv_init();
 
     /*Linux display device init*/
@@ -120,14 +103,11 @@ int main(int argc, char **argv)
     printf("Initializing UI...\n");
     ui_init();
 
-    rclcpp::init(argc, argv);
-    auto node = std::make_shared<HelloWorldNode>();
-    rclcpp::executors::SingleThreadedExecutor executor;
-    // executor.add_node(node);
-
     /*Handle LVGL tasks*/
     while(rclcpp::ok()) {
-        executor.spin_some();
+        if(g_executor) {
+            g_executor->spin_some();
+        }
         uint32_t sleep_ms = lv_timer_handler();
         if(sleep_ms < 1) {
             sleep_ms = 1;

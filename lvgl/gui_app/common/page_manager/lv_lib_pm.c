@@ -68,7 +68,7 @@ void lv_lib_pm_Deinit(lv_lib_pm_t *manager) {
  * @param page_obj 页面对象
  * @return         创建的页面指针，如果创建失败则返回 NULL
  */
-lv_lib_pm_page_t* lv_lib_pm_CreatePage(lv_lib_pm_t *manager, const char *name, void (*init)(void), void (*deinit)(void), lv_obj_t *page_obj, button_init_function button_init) {
+lv_lib_pm_page_t* lv_lib_pm_CreatePage(lv_lib_pm_t *manager, const char *name, void (*init)(void *arg), void (*deinit)(void), lv_obj_t *page_obj, button_init_function button_init, void *arg) {
     if (!manager || !name || !init || !deinit) {
         LV_LOG_WARN("PageManager: Invalid parameters for creating a page.");
         return NULL;
@@ -101,6 +101,7 @@ lv_lib_pm_page_t* lv_lib_pm_CreatePage(lv_lib_pm_t *manager, const char *name, v
     page->deinit = deinit;
     page->page_obj = page_obj;
     page->button_init = button_init;
+    page->arg = arg;
     // 将页面添加到所有页面列表
     if (manager->num_pages < LV_PM_MAX_PAGES) {  // 假设你设置了最大页面数
         LV_LOG_INFO("Page created");

@@ -23,9 +23,10 @@ find_package(json-c REQUIRED)
 find_package(CURL REQUIRED)
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
+find_package(geometry_msgs REQUIRED)
 
 # 将库链接到 gui_app
 target_link_libraries(gui_app json-c)
 target_include_directories(gui_app PRIVATE ${CURL_INCLUDE_DIRS})
 target_link_libraries(gui_app CURL::libcurl)
-ament_target_dependencies(gui_app rclcpp)
+ament_target_dependencies(gui_app rclcpp geometry_msgs)

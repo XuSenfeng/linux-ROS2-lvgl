@@ -1301,7 +1301,7 @@ static void _ui_sub_menus_creat(void)
 {
     for(int i = 0; i < _SUB_MENU_NUMS; i++)
     {
-        lv_lib_pm_CreatePage(&page_manager, ui_sub_menu_apps[i].name, ui_sub_menu_apps[i].init, ui_sub_menu_apps[i].deinit, NULL, NULL);
+        lv_lib_pm_CreatePage(&page_manager, ui_sub_menu_apps[i].name, ui_sub_menu_apps[i].init, ui_sub_menu_apps[i].deinit, NULL, NULL, &ui_sub_menu_apps[i].arg);
     }    
 }
 

@@ -41,7 +41,7 @@ typedef struct {
 
 void lv_lib_pm_Init(lv_lib_pm_t *manager);                                          
 void lv_lib_pm_Deinit(lv_lib_pm_t *manager);
-lv_lib_pm_page_t* lv_lib_pm_CreatePage(lv_lib_pm_t *manager, const char *name, void (*init)(void), void (*deinit)(void), lv_obj_t *page_obj, button_init_function button_init);                                       
+lv_lib_pm_page_t* lv_lib_pm_CreatePage(lv_lib_pm_t *manager, const char *name, void (*init)(void *arg), void (*deinit)(void), lv_obj_t *page_obj, button_init_function button_init, void *arg);                                       
 void lv_lib_pm_OpenPage(lv_lib_pm_t *manager, lv_lib_pm_page_t *page, char *name);  
 void lv_lib_pm_OpenPrePage(lv_lib_pm_t *manager);    
 lv_lib_pm_page_t* lv_lib_pm_GetCurrentPage(const lv_lib_pm_t *manager);   

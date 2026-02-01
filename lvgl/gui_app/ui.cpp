@@ -11,6 +11,9 @@
 #include "./pages/ui_GameMemoryPage/ui_GameMemoryPage.h"
 #include "./pages/ui_DrawPage/ui_DrawPage.h"
 #include "./pages/ui_CalculatorPage/ui_CalculatorPage.h"
+
+#include "rclcpp/rclcpp.hpp"
+#include <string>
 ///////////////////// VARIABLES ////////////////////
 
 lv_lib_pm_t page_manager;
@@ -26,7 +29,7 @@ ui_system_para_t ui_system_para;
 ///////////////////// all apps ////////////////////
 
 // #define _APP_NUMS 11 // number of apps (including HomePage)
-
+extern rclcpp::executors::SingleThreadedExecutor* g_executor ;
 ui_app_data_t ui_apps[] = 
 {
     {
@@ -121,7 +124,9 @@ ui_app_data_t ui_apps[] =
         .init = ui_ROSTest_init,
         .deinit = ui_ROSTest_deinit,
         .page_obj = NULL,
-        .button_init = ui_ROSTest_button
+        .button_init = ui_ROSTest_button,
+        .arg = (void *)&g_executor
+
     }
 
 };
@@ -130,8 +135,8 @@ ui_app_data_t ui_apps[] =
 
 static void msgbox_close_click_event_cb(lv_event_t * e)
 {
-    lv_obj_t * mbox = lv_event_get_target(e);
-    bool * mbox_exist = lv_event_get_user_data(e);
+    lv_obj_t * mbox = (lv_obj_t *)lv_event_get_target(e);
+    bool * mbox_exist = (bool *)lv_event_get_user_data(e);
     *mbox_exist = false;
 }
 
@@ -248,7 +253,7 @@ static void _gpios_init(void)
 ///////////////////// timer //////////////////////
 
 // 1s timer
-void _maintimer_cb(void)
+void _maintimer_cb(lv_timer_t* t)
 {
     static uint16_t time_count2 = 299;
     time_count2++;
@@ -287,7 +292,6 @@ void _maintimer_cb(void)
 }
 
 ///////////////////// SCREENS ////////////////////
-
 void ui_init(void)
 {
     int _APP_NUMS = sizeof(ui_apps) / sizeof(ui_app_data_t);
@@ -311,8 +315,12 @@ void ui_init(void)
     lv_lib_pm_page_t *pm_page[_APP_NUMS];
     for(int i = 0; i < _APP_NUMS; i++)
     {
+        if(ui_apps[i].name && strcmp(ui_apps[i].name, "ROSTestPage") == 0)
+        {
+            ui_apps[i].arg = (void *)g_executor;
+        }
         // 函数通常是 LVGL Power Management（电源管理）扩展库中的一部分，用于创建一个电源管理设置界面页面
-        pm_page[i] = lv_lib_pm_CreatePage(&page_manager, ui_apps[i].name, ui_apps[i].init, ui_apps[i].deinit, NULL, ui_apps[i].button_init);
+        pm_page[i] = lv_lib_pm_CreatePage(&page_manager, ui_apps[i].name, ui_apps[i].init, ui_apps[i].deinit, NULL, ui_apps[i].button_init, ui_apps[i].arg);
     }
     lv_lib_pm_OpenPage(&page_manager, NULL, "HomePage");
     lv_timer_create(_maintimer_cb, 1000, NULL);
