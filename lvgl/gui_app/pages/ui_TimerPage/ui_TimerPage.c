@@ -4,11 +4,25 @@
 
 static lv_obj_t *s_timer_page = NULL;
 static lv_obj_t *s_time_label = NULL;
+static lv_obj_t *s_pomodoro_label = NULL;
+static lv_obj_t *s_pomodoro_btn = NULL;
+static lv_obj_t *btn_label = NULL;
 static lv_timer_t *s_timer = NULL;
 static lv_display_rotation_t s_prev_rotation = LV_DISPLAY_ROTATION_0;
 static bool s_rotation_changed = false;
 
+typedef enum {
+    POMODORO_STATE_IDLE = 0,
+    POMODORO_STATE_WORK,
+    POMODORO_STATE_SHORT_BREAK,
+    POMODORO_STATE_LONG_BREAK
+} pomodoro_state_t;
 
+static pomodoro_state_t s_pomodoro_state = POMODORO_STATE_IDLE;
+static int32_t s_pomodoro_remaining_sec = 25 * 60;
+static uint8_t s_pomodoro_rounds = 0;
+
+LV_IMG_DECLARE(tomato80x69); // Declare the image resource
 ///////////////////// ANIMATIONS ////////////////////
 static void ui_event_gesture(lv_event_t * e)
 {
@@ -31,28 +45,84 @@ static void ui_timer_update_cb(lv_timer_t *timer)
         return;
     }
 
-    uint32_t total_sec = lv_tick_get() / 1000U;
-    uint32_t sec = total_sec % 60U;
-    uint32_t min = (total_sec / 60U) % 60U;
-    uint32_t hour = (total_sec / 3600U) % 24U;
+    uint32_t year, month, day, sec, min, hour;
+    sys_get_time((int *)&year, (int *)&month, (int *)&day, (int *)&hour, (int *)&min, (int *)&sec);
 
-    static char time_buf[9];
-    time_buf[0] = '0' + (hour / 10U);
-    time_buf[1] = '0' + (hour % 10U);
-    time_buf[2] = ':';
-    time_buf[3] = '0' + (min / 10U);
-    time_buf[4] = '0' + (min % 10U);
-    time_buf[5] = ':';
-    time_buf[6] = '0' + (sec / 10U);
-    time_buf[7] = '0' + (sec % 10U);
-    time_buf[8] = '\0';
-    lv_label_set_text(s_time_label, time_buf);
+    if (s_pomodoro_label) {
+        if (s_pomodoro_state != POMODORO_STATE_IDLE) {
+            if (s_pomodoro_remaining_sec > 0) {
+                s_pomodoro_remaining_sec--;
+            } else {
+                if (s_pomodoro_state == POMODORO_STATE_WORK) {
+                    s_pomodoro_rounds++;
+                    if ((s_pomodoro_rounds % 4U) == 0U) {
+                        s_pomodoro_state = POMODORO_STATE_LONG_BREAK;
+                        s_pomodoro_remaining_sec = 15 * 60;
+                    } else {
+                        s_pomodoro_state = POMODORO_STATE_SHORT_BREAK;
+                        s_pomodoro_remaining_sec = 5 * 60;
+                    }
+                } else {
+                    s_pomodoro_state = POMODORO_STATE_WORK;
+                    s_pomodoro_remaining_sec = 25 * 60;
+                }
+            }
+        }
+
+        const char *state_text = "番茄";
+        switch (s_pomodoro_state) {
+            case POMODORO_STATE_WORK:
+                state_text = "工作";
+                break;
+            case POMODORO_STATE_SHORT_BREAK:
+                state_text = "短休";
+                break;
+            case POMODORO_STATE_LONG_BREAK:
+                state_text = "长休";
+                break;
+            default:
+                state_text = "番茄";
+                break;
+        }
+
+        int32_t remain = s_pomodoro_remaining_sec;
+        if (remain < 0) remain = 0;
+        int32_t mm = remain / 60;
+        int32_t ss = remain % 60;
+        if(s_pomodoro_state == POMODORO_STATE_IDLE){
+            lv_label_set_text_fmt(s_pomodoro_label, "%s %02d:%02d", state_text, (int)mm, (int)ss);
+            lv_label_set_text_fmt(s_time_label, "%02d:%02d:%02d", (int)hour, (int)min, (int)sec);
+        }else{
+            lv_label_set_text_fmt(s_pomodoro_label, "%s %02d:%02d:%02d", state_text, (int)hour, (int)min, (int)sec);
+            lv_label_set_text_fmt(s_time_label, "%02d:%02d", (int)mm, (int)ss);
+        }
+
+    }
 }
 
 
 ///////////////////// SCREEN init ////////////////////
 
-LV_FONT_DECLARE(font_led128);
+static void ui_pomodoro_btn_cb(lv_event_t * e)
+{
+    LV_UNUSED(e);
+    if(s_pomodoro_state != POMODORO_STATE_IDLE) {
+        // stop pomodoro
+        s_pomodoro_state = POMODORO_STATE_IDLE;
+        s_pomodoro_remaining_sec = 25 * 60;
+        s_pomodoro_rounds = 0;
+        lv_obj_set_style_text_font(s_time_label, &font_led90, 0);
+        lv_label_set_text(btn_label, "开始");
+    } else {
+        // start pomodoro
+        s_pomodoro_state = POMODORO_STATE_WORK;
+        s_pomodoro_remaining_sec = 25 * 60;
+        lv_obj_set_style_text_font(s_time_label, &font_led128, 0);
+        lv_label_set_text(btn_label, "结束");
+    }
+    ui_timer_update_cb(NULL);
+
+}
 
 void ui_TimerPage_init(void *arg)
 {
@@ -60,6 +130,32 @@ void ui_TimerPage_init(void *arg)
     printf("timer ...");
     s_timer_page = lv_obj_create(NULL);
     lv_obj_clear_flag(s_timer_page, LV_OBJ_FLAG_SCROLLABLE);      /// Flags
+    lv_obj_set_style_bg_color(s_timer_page, lv_color_hex(0xFDECEC), LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_bg_opa(s_timer_page, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
+
+    int32_t screen_w = lv_display_get_horizontal_resolution(lv_display_get_default());
+    int32_t screen_h = lv_display_get_vertical_resolution(lv_display_get_default());
+
+    lv_obj_t *card = lv_obj_create(s_timer_page);
+    lv_obj_set_size(card, screen_w - 40, screen_h - 40);
+    lv_obj_center(card);
+    lv_obj_set_style_radius(card, 24, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_bg_color(card, lv_color_hex(0xFFFFFF), LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_bg_opa(card, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_shadow_color(card, lv_color_hex(0xD66B6B), LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_shadow_opa(card, 60, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_shadow_width(card, 24, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_clear_flag(card, LV_OBJ_FLAG_SCROLLABLE);
+
+    lv_obj_t *tomato = lv_image_create(card);
+    lv_image_set_src(tomato, &tomato80x69);
+    lv_obj_align(tomato, LV_ALIGN_TOP_LEFT, 20, 20);
+
+    lv_obj_t *title = lv_label_create(card);
+    lv_label_set_text(title, "番茄时钟");
+    lv_obj_set_style_text_font(title, &tomato_font32, 0);
+    lv_obj_set_style_text_color(title, lv_color_hex(0xC0392B), 0);
+    lv_obj_align(title, LV_ALIGN_TOP_LEFT, 120, 30);
 
     // lv_display_t *disp = lv_display_get_default();
     // if (disp) {
@@ -70,20 +166,31 @@ void ui_TimerPage_init(void *arg)
     //     s_rotation_changed = false;
     // }
 
-    s_time_label = lv_label_create(s_timer_page);
-    lv_obj_set_style_text_font(s_time_label, &font_led128, 0);
+    s_time_label = lv_label_create(card);
+    lv_obj_set_style_text_font(s_time_label, &font_led90, 0);
     lv_label_set_text(s_time_label, "00:00:00");
-    lv_obj_center(s_time_label);
-    lv_obj_update_layout(s_time_label);
-    int32_t label_w = lv_obj_get_width(s_time_label);
-    int32_t label_h = lv_obj_get_height(s_time_label);
-    // 设置旋转的中心点为标签中心
-    lv_obj_set_style_transform_pivot_x(s_time_label, label_w / 2, 0);
-    lv_obj_set_style_transform_pivot_y(s_time_label, label_h / 2, 0);
-    // 旋转90度
-    lv_obj_set_style_transform_angle(s_time_label, 900, 0);
+    lv_obj_set_style_text_color(s_time_label, lv_color_hex(0x2C3E50), 0);
+    lv_obj_align(s_time_label, LV_ALIGN_CENTER, 0, -10);
 
-    
+    s_pomodoro_label = lv_label_create(card);
+    lv_obj_set_style_text_font(s_pomodoro_label, &tomato_font32, 0);
+    lv_label_set_text(s_pomodoro_label, "番茄 25:00");
+    lv_obj_set_style_text_color(s_pomodoro_label, lv_color_hex(0xC0392B), 0);
+    lv_obj_align(s_pomodoro_label, LV_ALIGN_CENTER, 0, 90);
+
+    s_pomodoro_btn = lv_button_create(card);
+    lv_obj_set_size(s_pomodoro_btn, 160, 56);
+    lv_obj_set_style_radius(s_pomodoro_btn, 28, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_bg_color(s_pomodoro_btn, lv_color_hex(0xE74C3C), LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_bg_opa(s_pomodoro_btn, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_align(s_pomodoro_btn, LV_ALIGN_BOTTOM_MID, 0, -20);
+    lv_obj_add_event_cb(s_pomodoro_btn, ui_pomodoro_btn_cb, LV_EVENT_CLICKED, NULL);
+
+    btn_label = lv_label_create(s_pomodoro_btn);
+    lv_label_set_text(btn_label, "开始");
+    lv_obj_set_style_text_font(btn_label, &tomato_font32, 0);
+    lv_obj_set_style_text_color(btn_label, lv_color_hex(0xFFFFFF), 0);
+    lv_obj_center(btn_label);
 
     if (s_timer) {
         lv_timer_del(s_timer);
