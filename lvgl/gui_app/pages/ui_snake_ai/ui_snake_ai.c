@@ -14,7 +14,7 @@
 #define SNAKE_GRID_W 40
 #define SNAKE_GRID_H 30
 #define SNAKE_MAX_LEN (SNAKE_GRID_W * SNAKE_GRID_H)
-#define SNAKE_CELL_SIZE 16
+#define SNAKE_CELL_SIZE 12
 
 typedef struct {
     int x;
@@ -570,7 +570,7 @@ void ui_Snake_AI_init(void *arg)
     lv_obj_set_style_radius(s_start_btn, 28, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_bg_color(s_start_btn, lv_color_hex(0x27AE60), LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_bg_opa(s_start_btn, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
-    lv_obj_align(s_start_btn, LV_ALIGN_BOTTOM_RIGHT, -20, -10);
+    lv_obj_align(s_start_btn, LV_ALIGN_BOTTOM_RIGHT, -20, -5);
     lv_obj_add_event_cb(s_start_btn, snake_start_btn_cb, LV_EVENT_CLICKED, NULL);
 
     s_btn_label = lv_label_create(s_start_btn);
